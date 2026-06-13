@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none" />
+    <title>Highway Giants</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; user-select: none; }
+        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        :root {
+            --bg-gradient: radial-gradient(circle, #2c3e50, #000);
+            --panel-bg: rgba(0,0,0,0.6);
+            --text-color: white;
+            --card-bg: rgba(255,255,255,0.05);
+            --desc-color: #aaa;
+        }
+        .light-theme {
+            --bg-gradient: radial-gradient(circle, #e0e6ed, #95a5a6);
+            --panel-bg: rgba(255,255,255,0.85);
+            --text-color: #2c3e50;
+            --card-bg: rgba(0,0,0,0.05);
+            --desc-color: #555;
+        }
+
+        .overlay {
+            position: fixed; inset: 0; background: var(--bg-gradient);
+            color: var(--text-color); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+            overflow-y: auto; padding: 20px 0;
+        }
+        #menu-content { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 950px; width: 100%; }
+        .section-container { background: var(--panel-bg); padding: 15px; border-radius: 20px; text-align: center; border: 2px solid #3498db; width: 85%; }
+        #shop-container { border-color: #f1c40f; }
+        #tuning-container { border-color: #2ecc71; }
+        
+        #inventory { display: flex; gap: 15px; margin-top: 10px; justify-content: center; flex-wrap: wrap; }
+        .inventory-item { width: 65px; height: 130px; object-fit: contain; border: 3px solid #444; border-radius: 10px; opacity: 0.3; cursor: pointer; transition: 0.3s; }
+        .inventory-item.owned { opacity: 1; border-color: #bdc3c7; }
+        .inventory-item.selected { border-color: #f1c40f; transform: scale(1.1); box-shadow: 0 0 15px #f1c40f; opacity: 1; }
+        
+        .menu-row { display: flex; gap: 10px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+        .menu-btn { background: #34495e; color: white; border: 3px solid #7f8c8d; padding: 8px 16px; font-size: 14px; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .menu-btn.active { border-color: #3498db; background: #2980b9; box-shadow: 0 0 15px #3498db; transform: scale(1.02); }
+        .menu-btn.time-btn.active { border-color: #e67e22; background: #d35400; box-shadow: 0 0 15px #e67e22; }
+        
+        .tuning-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px; }
+        .tuning-card { background: var(--card-bg); padding: 12px; border-radius: 15px; border: 1px solid #2ecc71; text-align: left; }
+        .tuning-btn { width: 100%; background: #2ecc71; color: black; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 8px; transition: 0.2s; }
+        .tuning-btn:hover { background: #27ae60; }
+        .tuning-btn:disabled { background: #7f8c8d; color: #bdc3c7; cursor: not-allowed; border: 1px solid #7f8c8d; }
+        
+        .btn { padding: 12px 30px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 18px; transition: 0.2s; margin: 5px; }
+        .case-btn { background: #f1c40f; color: #000; display: inline-flex; align-items: center; gap: 8px; }
+        .tutorial-btn { background: #9b59b6; color: white; border: 2px solid #8e44ad; }
+        .theme-btn { background: #e67e22; color: white; border: 2px solid #d35400; }
+        .play-btn { background: #27ae60; color: white; font-size: 28px; border-radius: 50px; padding: 15px 55px; box-shadow: 0 6px 0 #1e8449; margin-top: 5px; }
+        
+        .coin-icon {
+            display: inline-block; width: 20px; height: 20px; background: #f1c40f; 
+            border-radius: 50%; border: 2px solid #f39c12; box-shadow: inset -2px -2px 0 #d35400, 0 2px 4px rgba(0,0,0,0.4);
+            vertical-align: middle; position: relative; margin-right: 5px;
+        }
+        .coin-icon::after { content: '$'; position: absolute; left: 50%; top: 48%; transform: translate(-50%, -50%); color: #d35400; font-family: 'Arial'; font-size: 12px; font-weight: bold; }
+
+        #tutorial-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 20; color: white; justify-content: center; align-items: center; }
+        .modal-content { background: #1a252f; border: 4px solid #9b59b6; padding: 30px; border-radius: 25px; max-width: 650px; width: 90%; text-align: left; box-shadow: 0 0 25px #9b59b6; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { text-align: center; color: #9b59b6; margin-top: 0; font-size: 32px; }
+        .tutorial-grid { display: grid; grid-template-columns: auto 1fr; gap: 15px 20px; align-items: center; font-size: 16px; margin: 20px 0; }
+        .key-badge { background: #ecf0f1; color: #2c3e50; padding: 4px 10px; border-radius: 5px; font-weight: bold; font-family: monospace; font-size: 18px; border-bottom: 4px solid #bdc3c7; text-align: center; min-width: 35px; }
+
+        #game-over { display: none; background: rgba(0,0,0,0.9); }
+        .stat-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin: 15px; min-width: 300px; text-align: center; border: 1px solid #e74c3c; }
+        .final-val { color: #f1c40f; font-size: 32px; display: block; }
+        
+        #hud { position: fixed; top: 20px; left: 20px; color: white; font-size: 16px; background: rgba(0,0,0,0.85); padding: 15px; border-radius: 15px; border: 2px solid #333; z-index: 5; line-height: 1.4; pointer-events: none; display: flex; flex-direction: column; gap: 3px; }
+        .stat-val { color: #f1c40f; font-weight: bold; }
+        .indicators-hud { display: flex; gap: 20px; margin-top: 5px; font-size: 24px; align-items: center; justify-content: center; }
+        .ind { color: #444; transition: 0.1s; }
+        .ind.active { color: #2ecc71; text-shadow: 0 0 10px #2ecc71; }
+        .horn-indicator { font-size: 14px; color: #aaa; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 5px; display: none; }
+        
+        #speedometer-container { display: flex; align-items: center; gap: 15px; border-bottom: 2px solid #444; padding-bottom: 8px; margin-bottom: 4px; }
+        .speedo-circle { width: 70px; height: 70px; border-radius: 50%; border: 4px dashed #f1c40f; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; box-shadow: 0 0 10px rgba(241,196,15,0.4); transition: border-color 0.2s; }
+        #speedo-val { font-size: 22px; color: #fff; font-weight: bold; }
+        .speedo-unit { font-size: 10px; color: #aaa; font-family: Arial, sans-serif; }
+        
+        #biome-announcement { position: fixed; top: 140px; left: 50%; transform: translateX(-50%); color: #f1c40f; font-size: 35px; text-shadow: 2px 2px 4px #000; font-weight: bold; display: none; z-index: 4; pointer-events: none; text-align: center; width: 90%; }
+
+        #mobile-controls { display: none; position: fixed; bottom: 30px; left: 0; right: 0; z-index: 6; justify-content: space-between; padding: 0 30px; pointer-events: none; }
+        .mobile-cluster { display: flex; gap: 15px; pointer-events: auto; }
+        .m-btn { width: 70px; height: 70px; background: rgba(255,255,255,0.25); border: 3px solid rgba(255,255,255,0.6); border-radius: 50%; color: white; font-size: 28px; font-weight: bold; display: flex; align-items: center; justify-content: center; -webkit-user-select: none; user-select: none; transition: transform 0.1s; }
+        .m-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.45); }
+        #m-horn { width: 65px; height: 65px; font-size: 22px; background: rgba(241, 196, 15, 0.3); border-color: #f1c40f; }
+
+        @media (max-width: 768px) {
+            #menu-content h1 { font-size: 28px !important; }
+            .section-container { width: 92%; padding: 10px; }
+            .tuning-grid { grid-template-columns: 1fr; gap: 10px; }
+            .menu-btn { padding: 6px 12px; font-size: 12px; }
+            .btn { padding: 10px 20px; font-size: 15px; }
+            .play-btn { font-size: 22px; padding: 12px 40px; }
+            .inventory-item { width: 45px; height: 90px; }
+            
+            #hud { top: 10px; left: 10px; padding: 10px; font-size: 13px; }
+            #speedometer-container { gap: 8px; }
+            .speedo-circle { width: 55px; height: 55px; border-width: 3px; }
+            #speedo-val { font-size: 18px; }
+            
+            #mobile-controls { display: flex; }
+            #biome-announcement { font-size: 24px; top: 160px; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+    <div id="speedometer-container">
+        <div class="speedo-circle" id="speedo-core">
+            <span id="speedo-val">40</span>
+            <span class="speedo-unit">КМ/ГОД</span>
+        </div>
+        <div>
+            <div style="display: flex; align-items: center;"><span class="coin-icon"></span> <span id="money-val" class="stat-val">0</span></div>
+            🏆 РАХУНОК: <span id="score-val" class="stat-val">0</span>
+        </div>
+    </div>
+    🌍 БІОМ: <span id="biome-val" style="color: #3498db; font-weight: bold;">МАГІСТРАЛЬ</span><br>
+    🕒 ЧАС ДОБИ: <span id="time-val" style="color: #e67e22; font-weight: bold;">ДЕНЬ</span><br>
+    🌧️ ПОГОДА: <span id="weather-val" style="color: #aedbff; font-weight: bold;">ЯСНО</span>
+    <div class="indicators-hud">
+        <span id="ind-L" class="ind">◀</span>
+        <span id="ind-R" class="ind">▶</span>
+        <span id="horn-hud" class="horn-indicator">📢 СИГНАЛ</span>
+    </div>
+</div>
+
+<div id="biome-announcement"></div>
+
+<div id="mobile-controls">
+    <div class="mobile-cluster">
+        <div class="m-btn" id="m-left">◀</div>
+        <div class="m-btn" id="m-right">▶</div>
+    </div>
+    <div class="mobile-cluster" style="align-items: center;">
+        <div class="m-btn" id="m-horn">📢</div>
+    </div>
+    <div class="mobile-cluster">
+        <div class="m-btn" id="m-brake" style="background: rgba(231, 76, 60, 0.3); border-color: #e74c3c;">⬇️</div>
+        <div class="m-btn" id="m-gas" style="background: rgba(46, 204, 113, 0.3); border-color: #2ecc71;">⬆️</div>
+    </div>
+</div>
+
+<div id="menu" class="overlay">
+    <div id="menu-content">
+        <h1 style="font-size: 42px; text-shadow: 3px 3px 0 #c0392b; margin: 5px 0; text-align: center;">HIGHWAY GIANTS</h1>
+        
+        <div class="section-container">
+            <h3 style="margin: 0; color: #3498db; font-size: 18px;">🌍 ВИБІР БІОМУ</h3>
+            <div class="menu-row">
+                <button id="btn-biome-AUTO" class="menu-btn active" onclick="selectBiome('AUTO')">🔄 АВТОЗМІНА БІОМІВ</button>
+                <button id="btn-biome-DAY" class="menu-btn" onclick="selectBiome('DAY')">🌳 MAГІСТРАЛЬ</button>
+                <button id="btn-biome-WINTER" class="menu-btn" onclick="selectBiome('WINTER')">❄️ ЗИМА</button>
+                <button id="btn-biome-DESERT" class="menu-btn" onclick="selectBiome('DESERT')">🏜 ПУСТЕЛЯ</button>
+            </div>
+        </div>
+
+        <div class="section-container" style="border-color: #e67e22;">
+            <h3 style="margin: 0; color: #e67e22; font-size: 18px;">🕒 ВИБІР ЧАСУ ДОБИ</h3>
+            <div class="menu-row">
+                <button id="btn-time-AUTO" class="menu-btn time-btn active" onclick="selectTimeMode('AUTO')">🔄 АВТОЗМІНА ЧАСУ</button>
+                <button id="btn-time-LIGHT" class="menu-btn time-btn" onclick="selectTimeMode('LIGHT')">☀️ ДЕНЬ</button>
+                <button id="btn-time-DARK" class="menu-btn time-btn" onclick="selectTimeMode('DARK')">🌙 НІЧ</button>
+            </div>
+        </div>
+
+        <div id="tuning-container" class="section-container">
+            <h3 style="margin: 0; color: #2ecc71; font-size: 18px;">🔧 ТЮНІНГ ТА МОДЕРНІЗАЦІЯ</h3>
+            <div class="tuning-grid">
+                <div class="tuning-card">
+                    <strong style="color: #2ecc71;">🚀 ДВИГУН (Швидість)</strong>
+                    <div id="engine-level-txt" style="font-size:13px; margin-top:5px;">Рівень: 0/3</div>
+                    <div id="engine-desc" style="font-size:12px; color: var(--desc-color);">Специфікація: Заводська</div>
+                    <button id="btn-upgrade-engine" class="tuning-btn" onclick="buyTuning('engine')">Покращити</button>
+                </div>
+                <div class="tuning-card">
+                    <strong style="color: #2ecc71;">🏁 ПІДВІСКА (Керованість)</strong>
+                    <div id="handling-level-txt" style="font-size:13px; margin-top:5px;">Рівень: 0/3</div>
+                    <div id="handling-desc" style="font-size:12px; color: var(--desc-color);">Специфікація: Заводська</div>
+                    <button id="btn-upgrade-handling" class="tuning-btn" onclick="buyTuning('handling')">Покращити</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="shop-container" class="section-container">
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button class="btn case-btn" onclick="openCase()"><span class="coin-icon"></span> КУПИТИ КЕЙС (100)</button>
+                <button class="btn tutorial-btn" onclick="toggleTutorial(true)">❓ ТУТОРІАЛ</button>
+                <button class="btn theme-btn" onclick="toggleTheme()">🌓 ТЕМА</button>
+            </div>
+            <div id="inventory"></div>
+        </div>
+        
+        <button class="btn play-btn" onclick="startGame()">ПОЇХАЛИ!</button>
+    </div>
+</div>
+
+<div id="tutorial-modal">
+    <div class="modal-content">
+        <h2>📋 ЯК ГРАТИ?</h2>
+        <hr style="border-color: #9b59b6;">
+        <div class="tutorial-grid">
+            <div class="key-badge">W / S</div>
+            <div><strong>Швидкість:</strong> Газ та гальма на ПК або стрілочки екранного блоку на мобілках.</div>
+            
+            <div class="key-badge">A / D</div>
+            <div><strong>Кермування:</strong> Зміна смуги. Прокачуй підвіску для кращого зчеплення.</div>
+            
+            <div class="key-badge">Q / E</div>
+            <div><strong>Поворотники:</strong> Світлодіодні інфікатори на кутах кузова.</div>
+
+            <div class="key-badge">H</div>
+            <div><strong>Клаксон:</strong> Змушує трафік попереду звільнити смугу руху!</div>
+        </div>
+        <hr style="border-color: #9b59b6; margin-bottom: 20px;">
+        <div style="text-align: center;">
+            <button class="btn" style="background: #e74c3c; color: white; padding: 10px 30px;" onclick="toggleTutorial(false)">ЗАКРИТИ</button>
+        </div>
+    </div>
+</div>
+
+<div id="game-over" class="overlay">
+    <h1 style="color: #e74c3c; font-size: 60px; text-align: center;">💥 АВАРІЯ!</h1>
+    <div class="stat-box">
+        <p>РАХУНОК: <span id="final-score" class="final-val">0</span></p>
+        <p>ЗІБРАНО МОНЕТ: <span id="final-coins" class="final-val">0</span></p>
+        <p>РЕКОРД: <span id="best-score" class="final-val">0</span></p>
+    </div>
+    <button class="btn play-btn" onclick="startGame()">ЩЕ РАЗ!</button>
+    <button class="btn" style="background: #555; color: white;" onclick="backToMenu()">У МЕНЮ</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let money = parseInt(localStorage.getItem("racing_money")) || 0;
+let bestScore = parseInt(localStorage.getItem("racing_best")) || 0;
+let ownedCars = JSON.parse(localStorage.getItem("racing_owned")) || ["2.png"];
+let currentCar = localStorage.getItem("racing_selected") || "2.png";
+
+let tuningEngine = parseInt(localStorage.getItem("tune_engine")) || 0;
+let tuningHandling = parseInt(localStorage.getItem("tune_handling")) || 0;
+let lightTheme = localStorage.getItem("light_theme") === "true";
+
+if (lightTheme) document.getElementById("menu").classList.add("light-theme");
+
+const tuningConfigs = {
+    engine: [
+        { cost: 0,   bonusSpeed: 0,   bonusAccel: 0,    label: "Сток" },
+        { cost: 120, bonusSpeed: 2.0, bonusAccel: 0.05, label: "Stage 1" },
+        { cost: 250, bonusSpeed: 4.0, bonusAccel: 0.10, label: "Stage 2" },
+        { cost: 450, bonusSpeed: 6.5, bonusAccel: 0.16, label: "Stage 3" }
+    ],
+    handling: [
+        { cost: 0,   bonusTurn: 0,   gripFact: 1.0,  label: "Сток Підвіска" },
+        { cost: 100, bonusTurn: 0.7, gripFact: 0.85, label: "Спорт Койловери" },
+        { cost: 200, bonusTurn: 1.4, gripFact: 0.70, label: "Поліуретан Setup" },
+        { cost: 400, bonusTurn: 2.2, gripFact: 0.50, label: "Трекова Setup" }
+    ]
+};
+
+const allCars = [{src: "1.png", mul: 1.1}, {src: "2.png", mul: 1.0}, {src: "3.png", mul: 1.2}, {src: "4.png", mul: 1.15}, {src: "5.png", mul: 1.3}, {src: "6.png", mul: 1.5}, {src: "7.png", mul: 1.25}];
+// Твої 7 спрайтів. Накладаючи поверх 10 відтінків, гра отримує понад 40 різних машин!
+const enemyCarFiles = ["1.png", "2.png", "3.png", "4.png", "5.png", "6.png", "7.png"];
+let images = {};
+
+allCars.forEach(c => { images[c.src] = new Image(); images[c.src].src = c.src; });
+enemyCarFiles.forEach(src => { if(!images[src]) { images[src] = new Image(); images[src].src = src; } });
+
+// Палітра на мій розсуд для генерації 40+ варіацій машин
+const carPalette = [
+    null, // оригінальний колір спрайту
+    "rgba(0, 0, 255, 0.25)",       // Синя
+    "rgba(128, 0, 128, 0.25)",     // Фіолетова
+    "rgba(255, 105, 180, 0.25)",   // Рожева
+    "rgba(0, 206, 209, 0.25)",     // Бірюзова
+    "rgba(255, 215, 0, 0.23)",      // Золоте таксі
+    "rgba(139, 69, 19, 0.25)",     // Іржава коричнева
+    "rgba(34, 139, 34, 0.25)",     // Лісова зелена
+    "rgba(47, 79, 79, 0.25)",      // Матова темно-сіра
+    "rgba(255, 69, 0, 0.25)",      // Кислотно-помаранчева
+    "rgba(240, 240, 240, 0.2)"     // Сріблястий білий
+];
+
+let running = false, score = 0, coinsCollected = 0, speed = 4.0, roadOffset = 0;
+let carSize = { w: 150, h: 300 }; // Робимо гравця і ботів більшими
+let playerX = 0, playerVX = 0;
+const keys = {};
+
+let indicatorLeft = false, indicatorRight = false, indicatorTimer = 0;
+let isHorning = false;
+let isBraking = false;
+
+const rainSystem = {
+    isRaining: false,
+    intensity: 0,
+    maxDrops: 180,
+    targetIntensity: 0,
+    timerToChange: 1200, 
+    drops: []
+};
+
+let selectedBiomeMode = "AUTO"; 
+let selectedTimeMode = "AUTO";
+let currentBiome = "DAY";
+let currentAmbientMode = "LIGHT"; 
+let lastBiomeType = "", lastTimeType = "";
+
+const biomeData = {
+    DAY: { name: "МАГІСТРАЛЬ", grass: [39, 174, 96], road: [44, 62, 80], lines: [236, 240, 241] },
+    WINTER: { name: "ЗИМА", grass: [236, 239, 241], road: [69, 90, 100], lines: [255, 255, 255] },
+    DESERT: { name: "ПУСТЕЛЯ", grass: [230, 186, 115], road: [87, 84, 76], lines: [241, 196, 15] }
+};
+
+const ambientData = {
+    LIGHT: { name: "ДЕНЬ", value: 0 },
+    DARK: { name: "НІЧ", value: 0.85 }
+};
+
+let visualGrass = [...biomeData.DAY.grass];
+let visualRoad = [...biomeData.DAY.road];
+let visualLines = [...biomeData.DAY.lines];
+let visualAmbient = ambientData.LIGHT.value;
+
+function toggleTheme() {
+    lightTheme = !lightTheme;
+    localStorage.setItem("light_theme", lightTheme);
+    document.getElementById("menu").classList.toggle("light-theme", lightTheme);
+}
+
+function updateUI() {
+    document.getElementById("money-val").innerText = money;
+    localStorage.setItem("racing_money", money);
+    localStorage.setItem("racing_owned", JSON.stringify(ownedCars));
+    localStorage.setItem("tune_engine", tuningEngine);
+    localStorage.setItem("tune_handling", tuningHandling);
+
+    const eCfg = tuningConfigs.engine[tuningEngine];
+    document.getElementById("engine-level-txt").innerText = `Рівень: ${tuningEngine}/3`;
+    document.getElementById("engine-desc").innerText = eCfg.label;
+    const btnEng = document.getElementById("btn-upgrade-engine");
+    if(tuningEngine >= 3) {
+        btnEng.innerText = "МАКСИМУМ"; btnEng.disabled = true;
+    } else {
+        const nextCost = tuningConfigs.engine[tuningEngine+1].cost;
+        btnEng.innerText = `Купити за ${nextCost} $`; btnEng.disabled = (money < nextCost);
+    }
+
+    const hCfg = tuningConfigs.handling[tuningHandling];
+    document.getElementById("handling-level-txt").innerText = `Рівень: ${tuningHandling}/3`;
+    document.getElementById("handling-desc").innerText = hCfg.label;
+    const btnHnd = document.getElementById("btn-upgrade-handling");
+    if(tuningHandling >= 3) {
+        btnHnd.innerText = "МАКСИМУМ"; btnHnd.disabled = true;
+    } else {
+        const nextCost = tuningConfigs.handling[tuningHandling+1].cost;
+        btnHnd.innerText = `Купити за ${nextCost} $`; btnHnd.disabled = (money < nextCost);
+    }
+
+    const inv = document.getElementById("inventory"); inv.innerHTML = "";
+    allCars.forEach(c => {
+        const img = document.createElement("img");
+        img.src = c.src;
+        img.className = "inventory-item" + (ownedCars.includes(c.src) ? " owned" : "") + (currentCar === c.src ? " selected" : "");
+        if(ownedCars.includes(c.src)) {
+            img.onclick = function() { currentCar = c.src; localStorage.setItem("racing_selected", c.src); updateUI(); };
+        }
+        inv.appendChild(img);
+    });
+}
+
+function buyTuning(type) {
+    if(type === 'engine' && tuningEngine < 3) {
+        const cost = tuningConfigs.engine[tuningEngine+1].cost;
+        if(money >= cost) { money -= cost; tuningEngine++; updateUI(); }
+    } else if(type === 'handling' && tuningHandling < 3) {
+        const cost = tuningConfigs.handling[tuningHandling+1].cost;
+        if(money >= cost) { money -= cost; tuningHandling++; updateUI(); }
+    }
+}
+
+function toggleTutorial(show) { document.getElementById("tutorial-modal").style.display = show ? "flex" : "none"; }
+
+function selectBiome(mode) {
+    selectedBiomeMode = mode;
+    document.querySelectorAll('.menu-btn:not(.time-btn)').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-biome-${mode}`).classList.add('active');
+}
+
+function selectTimeMode(mode) {
+    selectedTimeMode = mode;
+    document.querySelectorAll('.time-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-time-${mode}`).classList.add('active');
+}
+
+function openCase() {
+    if (money < 100) return;
+    money -= 100;
+    const randomCar = allCars[Math.floor(Math.random() * allCars.length)];
+    if (!ownedCars.includes(randomCar.src)) ownedCars.push(randomCar.src);
+    updateUI();
+}
+
+const getRoadBounds = () => {
+    const roadW = Math.min(canvas.width * 0.8, window.innerWidth < 768 ? 420 : 900);
+    const start = (canvas.width - roadW) / 2;
+    return { start, end: start + roadW - carSize.w, width: roadW };
+};
+
+function resize() { 
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    if (window.innerWidth < 768) {
+        carSize = { w: 75, h: 150 };
+    } else {
+        carSize = { w: 150, h: 300 }; // Великі деталізовані машини
+    }
+    const b = getRoadBounds(); playerX = b.start + b.width * 0.75;
+}
+window.onresize = resize; resize();
+
+function setupMobileControls() {
+    const attachTouch = (id, key) => {
+        const el = document.getElementById(id);
+        el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; if(key==='KeyH'){isHorning=true; document.getElementById("horn-hud").style.display="inline-block";} });
+        el.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; if(key==='KeyH'){isHorning=false; document.getElementById("horn-hud").style.display="none";} });
+    };
+    attachTouch("m-left", "KeyA");
+    attachTouch("m-right", "KeyD");
+    attachTouch("m-gas", "KeyW");
+    attachTouch("m-brake", "KeyS");
+    attachTouch("m-horn", "KeyH");
+}
+setupMobileControls();
+
+window.addEventListener("keydown", e => {
+    keys[e.code] = true;
+    if (running) {
+        if (e.code === "KeyQ") { indicatorLeft = !indicatorLeft; if(indicatorLeft) indicatorRight = false; }
+        if (e.code === "KeyE") { indicatorRight = !indicatorRight; if(indicatorRight) indicatorLeft = false; }
+        if (e.code === "KeyH") { isHorning = true; document.getElementById("horn-hud").style.display = "inline-block"; }
+    }
+});
+window.addEventListener("keyup", e => {
+    keys[e.code] = false;
+    if (e.code === "KeyH") { isHorning = false; document.getElementById("horn-hud").style.display = "none"; }
+});
+
+let enemies = [], coins = [];
+
+function createRaindrop() {
+    return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        len: Math.random() * 25 + 15,
+        fallSpeed: Math.random() * 12 + 22,
+        opacity: Math.random() * 0.25 + 0.15
+    };
+}
+
+function processWeatherLogic() {
+    rainSystem.timerToChange--;
+    if(rainSystem.timerToChange <= 0) {
+        rainSystem.isRaining = !rainSystem.isRaining;
+        rainSystem.targetIntensity = rainSystem.isRaining ? rainSystem.maxDrops : 0;
+        rainSystem.timerToChange = Math.random() * 800 + 1000; 
+        document.getElementById("weather-val").innerText = rainSystem.isRaining ? "ЗЛИВА 🌧️" : "ЯСНО ☀️";
+    }
+
+    if(rainSystem.intensity < rainSystem.targetIntensity) rainSystem.intensity += 1.5;
+    if(rainSystem.intensity > rainSystem.targetIntensity) rainSystem.intensity -= 1.5;
+
+    let currTarget = Math.floor(rainSystem.intensity);
+    if(rainSystem.drops.length < currTarget) {
+        for(let i=rainSystem.drops.length; i<currTarget; i++) rainSystem.drops.push(createRaindrop());
+    } else if(rainSystem.drops.length > currTarget) {
+        rainSystem.drops.splice(currTarget);
+    }
+
+    rainSystem.drops.forEach(d => {
+        d.y += d.fallSpeed;
+        d.x -= (speed * 0.22); 
+        if(d.y > canvas.height) {
+            d.y = Math.random() * -30;
+            d.x = Math.random() * canvas.width;
+        }
+    });
+}
+
+function checkEnvironment() {
+    if (selectedBiomeMode === "AUTO") {
+        let cycle = Math.floor(score / 1200) % 3;
+        currentBiome = (cycle === 0) ? "DAY" : (cycle === 1 ? "WINTER" : "DESERT");
+    } else { currentBiome = selectedBiomeMode; }
+
+    if (selectedTimeMode === "AUTO") {
+        let cycleTime = Math.floor(score / 1800) % 2;
+        currentAmbientMode = (cycleTime === 0) ? "LIGHT" : "DARK";
+    } else { currentAmbientMode = selectedTimeMode; }
+
+    if (currentBiome !== lastBiomeType || currentAmbientMode !== lastTimeType) {
+        lastBiomeType = currentBiome; lastTimeType = currentAmbientMode;
+        document.getElementById("biome-val").innerText = biomeData[currentBiome].name;
+        document.getElementById("time-val").innerText = ambientData[currentAmbientMode].name;
+        
+        let el = document.getElementById("biome-announcement");
+        el.innerText = `${biomeData[currentBiome].name} ➔ ${ambientData[currentAmbientMode].name}`;
+        el.style.display = "block";
+        setTimeout(() => el.style.display = "none", 2000);
+    }
+}
+
+function lerp(start, end, amt) { return start + (end - start) * amt; }
+
+function updateTransitions() {
+    let targetB = JSON.parse(JSON.stringify(biomeData[currentBiome]));
+    const targetA = ambientData[currentAmbientMode];
+    
+    if(rainSystem.intensity > 10) {
+        let wetFactor = 0.65;
+        targetB.road = targetB.road.map(c => c * wetFactor);
+        targetB.grass = targetB.grass.map(c => c * (wetFactor + 0.1));
+    }
+
+    const rate = 0.012; 
+    for (let i = 0; i < 3; i++) {
+        visualGrass[i] = lerp(visualGrass[i], targetB.grass[i], rate);
+        visualRoad[i] = lerp(visualRoad[i], targetB.road[i], rate);
+        visualLines[i] = lerp(visualLines[i], targetB.lines[i], rate);
+    }
+    
+    let extraDarkness = (rainSystem.intensity / rainSystem.maxDrops) * 0.25;
+    let finalAmbientTarget = Math.min(targetA.value + extraDarkness, 0.92);
+    visualAmbient = lerp(visualAmbient, finalAmbientTarget, rate);
+}
+
+function spawnObject() {
+    if (!running) return;
+    const b = getRoadBounds();
+    let lane = Math.floor(Math.random() * 4);
+    if (enemies.some(e => e.lane === lane && e.y < carSize.h * 1.5)) return;
+
+    if (Math.random() < 0.82) {
+        let isOpposite = lane < 2;
+        // Швидкість ботів зафіксована строго в діапазоні 50-60 км/год (ігрова одиниця ~5-6)
+        let botRealSpeed = Math.random() * 1.0 + 5.0; 
+        
+        enemies.push({ 
+            lane, 
+            x: b.start + (b.width / 4) * lane + (b.width / 8 - carSize.w / 2),
+            y: -carSize.h * 1.5, 
+            baseSpeed: botRealSpeed,
+            speed: botRealSpeed, 
+            img: enemyCarFiles[Math.floor(Math.random() * enemyCarFiles.length)], 
+            tint: carPalette[Math.floor(Math.random() * carPalette.length)], // Кастомний колір поверх
+            isOpposite: isOpposite,
+            targetX: null, 
+            lastDecision: Date.now(),
+            indL: false, indR: false,
+            hornReacting: false,       
+            hornNeedsEscape: false,
+            isBraking: false
+        });
+    } else {
+        coins.push({ lane, y: -200, x: b.start + (b.width / 4) * lane + b.width / 8 });
+    }
+}
+
+function update() {
+    if (!running) return;
+    const b = getRoadBounds();
+    
+    const carData = allCars.find(c => c.src === currentCar);
+    const engineCfg = tuningConfigs.engine[tuningEngine];
+    
+    // Мінімальна швидкість тепер чітко дорівнює 4.0 (тобто 40 км/год на HUD)
+    let minS = 4.0; 
+    let scoreBonus = Math.min(Math.floor(score / 600), 4);
+    let maxS = (7.5 + scoreBonus + engineCfg.bonusSpeed) * carData.mul;
+    let accelValue = 0.08 + engineCfg.bonusAccel;
+
+    if (keys["KeyW"]) {
+        speed = Math.min(speed + accelValue, maxS);
+        isBraking = false;
+    } else if (keys["KeyS"]) {
+        speed = Math.max(speed - 0.2, minS);
+        isBraking = true; 
+    } else {
+        if (speed > minS) speed -= 0.03;
+        if (speed < minS) speed = minS;
+        isBraking = false;
+    }
+
+    // Візуальний спідометр: множимо внутрішню швидкість на 10, щоб мінімальна була рівно 40
+    let displaySpeed = Math.floor(speed * 10);
+    document.getElementById("speedo-val").innerText = displaySpeed;
+    
+    let speedRatio = displaySpeed / 200;
+    let speedoCore = document.getElementById("speedo-core");
+    if(speedRatio > 0.75) speedoCore.style.borderColor = "#e74c3c";
+    else if(speedRatio > 0.45) speedoCore.style.borderColor = "#e67e22";
+    else speedoCore.style.borderColor = "#2ecc71";
+
+    const handlingCfg = tuningConfigs.handling[tuningHandling];
+    let baseAccelX = (window.innerWidth < 768 ? 1.5 : 2.6) + handlingCfg.bonusTurn;
+    let baseFrictionX = 0.80; 
+
+    if(rainSystem.intensity > 15) {
+        let wetImpact = (rainSystem.intensity / rainSystem.maxDrops); 
+        baseFrictionX = lerp(0.80, 0.94 - (handlingCfg.gripFact * 0.08), wetImpact);
+        baseAccelX = baseAccelX * lerp(1.0, 0.82 + (tuningHandling * 0.04), wetImpact);
+    }
+
+    if (keys["KeyA"] || keys["ArrowLeft"]) playerVX -= baseAccelX;
+    else if (keys["KeyD"] || keys["ArrowRight"]) playerVX += baseAccelX;
+    
+    playerVX *= baseFrictionX; 
+    playerX += playerVX;
+
+    if (playerX < b.start) { playerX = b.start; playerVX *= -0.2; }
+    if (playerX > b.end) { playerX = b.end; playerVX *= -0.2; }
+
+    roadOffset += speed;
+    score++;
+    indicatorTimer = (indicatorTimer + 1) % 30;
+    
+    document.getElementById("ind-L").className = "ind" + (indicatorLeft ? " active" : "");
+    document.getElementById("ind-R").className = "ind" + (indicatorRight ? " active" : "");
+
+    processWeatherLogic();
+    checkEnvironment(); 
+    updateTransitions(); 
+    
+    // ПОРЕМОНТОВАНІ ТА ПОКРАЩЕНІ ХІТБОКСИ: Гравець стоїть у самому низу екрана
+    const playerY = canvas.height - carSize.h - (window.innerWidth < 768 ? 40 : 50);
+    const playerLane = Math.floor((playerX - b.start) / (b.width / 4));
+
+    // Надійні зменшені хітбокси по центру (70% від графічного розміру)
+    const pBoxW = carSize.w * 0.70;  
+    const pBoxH = carSize.h * 0.70;  
+    const pBoxX = playerX + (carSize.w - pBoxW) / 2;
+    const pBoxY = playerY + (carSize.h - pBoxH) / 2;
+
+    enemies.forEach(e => {
+        // Логіка відносної швидкості руху ботів
+        e.speed = e.baseSpeed;
+        e.isBraking = false;
+        
+        if (e.targetX !== null && Math.abs(e.x - e.targetX) < 6) {
+            e.x = e.targetX;
+            e.targetX = null;
+            e.indL = false; e.indR = false;
+            e.hornReacting = false;
+            e.hornNeedsEscape = false;
+        }
+
+        // Гудок розганяє ботів попереду (БЕЗ малювання червоного півкола на екрані)
+        if (isHorning && !e.isOpposite && e.lane === playerLane && e.y < playerY && (playerY - e.y) < 600) {
+            if (!e.hornReacting && e.targetX === null) {
+                e.hornReacting = true;
+                let leftLane = e.lane - 1, rightLane = e.lane + 1;
+                let escapeLane = null;
+                
+                if (leftLane >= 2 && !enemies.some(o => o !== e && o.lane === leftLane && Math.abs(o.y - e.y) < carSize.h * 1.3)) {
+                    if (!(playerLane === leftLane && Math.abs(playerY - e.y) < 400)) escapeLane = leftLane;
+                }
+                if (escapeLane === null && rightLane <= 3 && !enemies.some(o => o !== e && o.lane === rightLane && Math.abs(o.y - e.y) < carSize.h * 1.3)) {
+                    if (!(playerLane === rightLane && Math.abs(playerY - e.y) < 400)) escapeLane = rightLane;
+                }
+                
+                if (escapeLane !== null) {
+                    if (escapeLane < e.lane) { e.indL = true; e.indR = false; } else { e.indR = true; e.indL = false; }
+                    e.lane = escapeLane;
+                    e.targetX = b.start + (b.width / 4) * e.lane + (b.width / 8 - carSize.w / 2);
+                    e.lastDecision = Date.now();
+                } else {
+                    e.hornNeedsEscape = true; 
+                }
+            }
+        }
+
+        if (e.hornReacting && e.hornNeedsEscape && e.targetX === null) {
+            e.speed = speed + 4; 
+            let leftLane = e.lane - 1, rightLane = e.lane + 1;
+            let escapeLane = null;
+            if (leftLane >= 2 && !enemies.some(o => o !== e && o.lane === leftLane && Math.abs(o.y - e.y) < carSize.h * 1.2)) {
+                if (!(playerLane === leftLane && Math.abs(playerY - e.y) < 400)) escapeLane = leftLane;
+            }
+            if (escapeLane === null && rightLane <= 3 && !enemies.some(o => o !== e && o.lane === rightLane && Math.abs(o.y - e.y) < carSize.h * 1.2)) {
+                if (!(playerLane === rightLane && Math.abs(playerY - e.y) < 400)) escapeLane = rightLane;
+            }
+            
+            if (escapeLane !== null) {
+                if (escapeLane < e.lane) { e.indL = true; e.indR = false; } else { e.indR = true; e.indL = false; }
+                e.lane = escapeLane;
+                e.targetX = b.start + (b.width / 4) * e.lane + (b.width / 8 - carSize.w / 2);
+                e.hornNeedsEscape = false;
+                e.lastDecision = Date.now();
+            }
+        }
+
+        if (!e.isOpposite && !e.hornReacting) {
+            let leaderY = null, leaderSpeed = null;
+            if (e.lane === playerLane && playerY < e.y && (e.y - playerY) < 350) { leaderY = playerY; leaderSpeed = speed; }
+            
+            enemies.forEach(other => {
+                if (other !== e && other.lane === e.lane && other.y < e.y && (e.y - other.y) < 350) {
+                    if (leaderY === null || other.y > leaderY) { leaderY = other.y; leaderSpeed = other.speed; }
+                }
+            });
+
+            if (leaderY !== null && e.baseSpeed > leaderSpeed) {
+                let leftLane = e.lane - 1, rightLane = e.lane + 1;
+                let lanesToTry = [];
+                if (leftLane >= 2) lanesToTry.push(leftLane);
+                if (rightLane <= 3) lanesToTry.push(rightLane);
+
+                for (let nL of lanesToTry) {
+                    let laneFree = true;
+                    if (nL === playerLane && Math.abs(playerY - e.y) < carSize.h * 1.5) laneFree = false;
+                    if (enemies.some(o => o !== e && o.lane === nL && Math.abs(o.y - e.y) < carSize.h * 1.6)) laneFree = false;
+
+                    if (laneFree) {
+                        if (nL < e.lane) { e.indL = true; e.indR = false; } else { e.indR = true; e.indL = false; }
+                        e.lane = nL; e.targetX = b.start + (b.width / 4) * e.lane + (b.width / 8 - carSize.w / 2);
+                        e.lastDecision = Date.now();
+                        break;
+                    }
+                }
+                if (e.targetX === null) {
+                    e.speed = leaderSpeed; 
+                    e.isBraking = true; 
+                }
+            }
+        }
+
+        if (e.isOpposite) e.y += (speed + e.speed); else e.y += (speed - e.speed);
+        
+        if (e.targetX === null && !e.hornReacting && Date.now() - e.lastDecision > 2500 && Math.random() < 0.015) {
+            let dir = Math.random() > 0.5 ? 1 : -1;
+            let nL = e.lane + dir;
+            let valid = false;
+            if (!e.isOpposite && nL >= 2 && nL <= 3) valid = true;
+            if (e.isOpposite && nL >= 0 && nL <= 1) valid = true;
+
+            if (valid) {
+                let safe = true;
+                if (!e.isOpposite && nL === playerLane && Math.abs(playerY - e.y) < carSize.h * 1.5) safe = false;
+                if (enemies.some(o => o !== e && o.lane === nL && Math.abs(o.y - e.y) < carSize.h * 1.8)) safe = false;
+
+                if (safe) {
+                    if (dir === -1) { e.indL = true; e.indR = false; } else { e.indR = true; e.indL = false; }
+                    e.lane = nL; e.targetX = b.start + (b.width / 4) * e.lane + (b.width / 8 - carSize.w / 2);
+                    e.lastDecision = Date.now();
+                }
+            }
+        }
+        if (e.targetX !== null) e.x += (e.targetX - e.x) * 0.08;
+
+        // ТОЧНІ ПРАВИЛЬНІ ХІТБОКСИ БОТІВ (70%)
+        const eBoxW = carSize.w * 0.70;
+        const eBoxH = carSize.h * 0.70;
+        const eBoxX = e.x + (carSize.w - eBoxW) / 2;
+        const eBoxY = e.y + (carSize.h - eBoxH) / 2;
+
+        if (pBoxX < eBoxX + eBoxW && pBoxX + pBoxW > eBoxX &&
+            pBoxY < eBoxY + eBoxH && pBoxY + pBoxH > eBoxY) {
+            gameOver();
+        }
+    });
+
+    coins.forEach((c, i) => {
+        c.y += speed;
+        if (Math.abs(playerX + carSize.w/2 - c.x) < carSize.w * 0.45 && Math.abs(playerY + carSize.h/2 - c.y) < carSize.h * 0.4) {
+            money += 1; coinsCollected += 1; updateUI(); coins.splice(i, 1);
+        }
+    });
+
+    enemies = enemies.filter(e => e.y < canvas.height + 800 && e.y > -1500);
+    coins = coins.filter(c => c.y < canvas.height + 200);
+
+    if (Math.random() < 0.04) spawnObject();
+    document.getElementById("score-val").innerText = score;
+}
+
+function drawSingleHeadlight(startX, startY, offsetX, offsetY, angle, ambientIntensity) {
+    if (ambientIntensity < 0.15) return;
+    ctx.save();
+    ctx.translate(startX + offsetX, startY + offsetY);
+    ctx.rotate(angle);
+
+    let alphaStart = (ambientIntensity * 0.6); 
+    let lightLength = (window.innerWidth < 768 ? 130 : 250) + (ambientIntensity * 250);
+    let lightWidth = (window.innerWidth < 768 ? 40 : 80) + (ambientIntensity * 100);
+
+    let gradient = ctx.createLinearGradient(0, 0, 0, -lightLength);
+    gradient.addColorStop(0, `rgba(255, 255, 235, ${alphaStart})`);
+    gradient.addColorStop(0.2, `rgba(255, 255, 200, ${alphaStart * 0.45})`);
+    gradient.addColorStop(0.6, `rgba(255, 255, 180, ${alphaStart * 0.15})`);
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.moveTo(-4, 0); 
+    ctx.lineTo(-lightWidth, -lightLength);
+    ctx.lineTo(lightWidth, -lightLength);
+    ctx.lineTo(4, 0); 
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawIndicatorLight(x, y, isLeft, active, isOpposite) {
+    if (!active) return;
+    if (indicatorTimer < 15) return; 
+    
+    ctx.save();
+    ctx.fillStyle = "#ff9f00"; 
+    ctx.shadowColor = "#ff6f00";
+    ctx.shadowBlur = 12;
+    
+    const indW = window.innerWidth < 768 ? 6 : 12;  
+    const indH = window.innerWidth < 768 ? 11 : 22;  
+    
+    let xPos = isLeft ? x : (x + carSize.w - indW);
+    let yFront = isOpposite ? (y + carSize.h - indH) : y;
+    let yRear = isOpposite ? y : (y + carSize.h - indH);
+    
+    ctx.fillRect(xPos, yFront, indW, indH);
+    ctx.fillRect(xPos, yRear, indW, indH);
+    ctx.restore();
+}
+
+function drawBrakeLights(x, y, braking, isOpposite) {
+    if (!braking) return;
+    ctx.save();
+    ctx.fillStyle = "#ff0000"; 
+    ctx.shadowColor = "#ff0000";
+    ctx.shadowBlur = 20;
+
+    const brakeW = window.innerWidth < 768 ? 10 : 20; 
+    const brakeH = window.innerWidth < 768 ? 7 : 14; 
+    const indW = window.innerWidth < 768 ? 6 : 12;   
+
+    let yPos = isOpposite ? y : (y + carSize.h - brakeH);
+    let xLeft = x + indW;
+    let xRight = x + carSize.w - indW - brakeW;
+
+    ctx.fillRect(xLeft, yPos, brakeW, brakeH);
+    ctx.fillRect(xRight, yPos, brakeW, brakeH);
+    ctx.restore();
+}
+
+function draw() {
+    const colGrass = `rgb(${Math.floor(visualGrass[0])},${Math.floor(visualGrass[1])},${Math.floor(visualGrass[2])})`;
+    const colRoad = `rgb(${Math.floor(visualRoad[0])},${Math.floor(visualRoad[1])},${Math.floor(visualRoad[2])})`;
+    const colLines = `rgb(${Math.floor(visualLines[0])},${Math.floor(visualLines[1])},${Math.floor(visualLines[2])})`;
+
+    ctx.fillStyle = colGrass; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const b = getRoadBounds();
+    
+    let borderW = window.innerWidth < 768 ? 15 : 35;
+    ctx.fillStyle = "#f1c40f"; ctx.fillRect(b.start - borderW, 0, borderW, canvas.height);
+    ctx.fillRect(b.start + b.width, 0, borderW, canvas.height);
+    ctx.fillStyle = colRoad; ctx.fillRect(b.start, 0, b.width, canvas.height);
+
+    ctx.strokeStyle = colLines; ctx.lineWidth = window.innerWidth < 768 ? 3 : 6;
+    for (let i = 1; i < 4; i++) {
+        if (i === 2) {
+            ctx.setLineDash([]); ctx.strokeRect(b.start + (b.width/4)*i - (window.innerWidth < 768 ? 2 : 5), 0, window.innerWidth < 768 ? 4 : 10, canvas.height);
+        } else {
+            ctx.setLineDash([60, 40]); ctx.lineDashOffset = -roadOffset;
+            ctx.beginPath(); ctx.moveTo(b.start + (b.width/4)*i, 0); ctx.lineTo(b.start + (b.width/4)*i, canvas.height); ctx.stroke();
+        }
+    }
+
+    coins.forEach(c => { 
+        let coinR = window.innerWidth < 768 ? 12 : 23;
+        ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(c.x, c.y, coinR, 0, Math.PI*2); ctx.fill(); 
+        ctx.strokeStyle = "#d35400"; ctx.lineWidth = 2; ctx.stroke(); 
+        ctx.fillStyle = "#fff"; ctx.font = `bold ${window.innerWidth < 768 ? '10px' : '16px'} Arial`; 
+        ctx.fillText("$", c.x - (window.innerWidth < 768 ? 3 : 5), c.y + (window.innerWidth < 768 ? 4 : 6));
+    });
+
+    const playerY = canvas.height - carSize.h - (window.innerWidth < 768 ? 40 : 50);
+
+    enemies.forEach(e => {
+        ctx.save();
+        if (images[e.img] && images[e.img].complete && images[e.img].naturalWidth !== 0) {
+            if (e.isOpposite) { 
+                ctx.translate(e.x + carSize.w/2, e.y + carSize.h/2); ctx.rotate(Math.PI); 
+                ctx.drawImage(images[e.img], -carSize.w/2, -carSize.h/2, carSize.w, carSize.h); 
+            } else { 
+                ctx.drawImage(images[e.img], e.x, e.y, carSize.w, carSize.h); 
+            }
+            
+            // Накладання колірних відтінків для генерації різноманітного трафіку
+            if (e.tint) {
+                ctx.fillStyle = e.tint;
+                if (e.isOpposite) {
+                    ctx.fillRect(-carSize.w/2, -carSize.h/2, carSize.w, carSize.h);
+                } else {
+                    ctx.fillRect(e.x, e.y, carSize.w, carSize.h);
+                }
+            }
+        } else {
+            ctx.fillStyle = e.isOpposite ? "#e74c3c" : "#95a5a6";
+            ctx.fillRect(e.x, e.y, carSize.w, carSize.h);
+        }
+        ctx.restore();
+    });
+
+    if (images[currentCar] && images[currentCar].complete && images[currentCar].naturalWidth !== 0) {
+        ctx.drawImage(images[currentCar], playerX, playerY, carSize.w, carSize.h);
+    } else {
+        ctx.fillStyle = "#3498db";
+        ctx.fillRect(playerX, playerY, carSize.w, carSize.h);
+    }
+    
+    // Червоне півколо гудка ПОВНІСТЮ ВИДАЛЕНО звідси, тепер екран залишається чистим при натисканні H.
+
+    if (visualAmbient > 0) {
+        ctx.fillStyle = `rgba(5, 10, 20, ${visualAmbient})`; 
+        ctx.globalCompositeOperation = 'multiply'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over'; 
+    }
+
+    ctx.globalCompositeOperation = 'screen'; 
+    let fOffset = window.innerWidth < 768 ? 15 : 30;
+    drawSingleHeadlight(playerX + carSize.w/2, playerY, -fOffset, 8, 0, visualAmbient);
+    drawSingleHeadlight(playerX + carSize.w/2, playerY, fOffset, 8, 0, visualAmbient);
+
+    enemies.forEach(e => {
+        if (e.y > -carSize.h && e.y < canvas.height + carSize.h) {
+            if (e.isOpposite) {
+                drawSingleHeadlight(e.x + carSize.w/2, e.y + carSize.h, -fOffset, -8, Math.PI, visualAmbient);
+                drawSingleHeadlight(e.x + carSize.w/2, e.y + carSize.h, fOffset, -8, Math.PI, visualAmbient);
+            } else {
+                drawSingleHeadlight(e.x + carSize.w/2, e.y, -fOffset, 8, 0, visualAmbient);
+                drawSingleHeadlight(e.x + carSize.w/2, e.y, fOffset, 8, 0, visualAmbient);
+            }
+        }
+    });
+    ctx.globalCompositeOperation = 'source-over'; 
+
+    drawBrakeLights(playerX, playerY, isBraking, false);
+    enemies.forEach(e => {
+        if (e.y > -carSize.h && e.y < canvas.height + carSize.h) {
+            drawBrakeLights(e.x, e.y, e.isBraking, e.isOpposite);
+        }
+    });
+
+    drawIndicatorLight(playerX, playerY, true, indicatorLeft, false);
+    drawIndicatorLight(playerX, playerY, false, indicatorRight, false);
+
+    enemies.forEach(e => {
+        if (e.y > -carSize.h && e.y < canvas.height + carSize.h) {
+            drawIndicatorLight(e.x, e.y, true, e.indL, e.isOpposite);
+            drawIndicatorLight(e.x, e.y, false, e.indR, e.isOpposite);
+        }
+    });
+
+    if(rainSystem.drops.length > 0) {
+        ctx.save();
+        ctx.lineWidth = 1.5;
+        rainSystem.drops.forEach(d => {
+            ctx.strokeStyle = `rgba(165, 215, 255, ${d.opacity})`;
+            ctx.beginPath();
+            ctx.moveTo(d.x, d.y);
+            ctx.lineTo(d.x - (speed * 0.18), d.y + d.len);
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+function startGame() { 
+    running = true; score = 0; coinsCollected = 0; enemies = []; coins = []; 
+    speed = 4.0; playerVX = 0; indicatorLeft = false; indicatorRight = false; isHorning = false; isBraking = false;
+    
+    rainSystem.isRaining = false;
+    rainSystem.intensity = 0;
+    rainSystem.targetIntensity = 0;
+    rainSystem.drops = [];
+    rainSystem.timerToChange = 900; 
+    document.getElementById("weather-val").innerText = "ЯСНО ☀️";
+
+    if (selectedBiomeMode === "AUTO") {
+        currentBiome = "DAY";
+    } else {
+        currentBiome = selectedBiomeMode;
+    }
+
+    if (selectedTimeMode === "AUTO") {
+        currentAmbientMode = "LIGHT";
+    } else {
+        currentAmbientMode = selectedTimeMode;
+    }
+    
+    lastBiomeType = currentBiome; lastTimeType = currentAmbientMode;
+    
+    visualGrass = [...biomeData[currentBiome].grass];
+    visualRoad = [...biomeData[currentBiome].road];
+    visualLines = [...biomeData[currentBiome].lines];
+    visualAmbient = ambientData[currentAmbientMode].value;
+
+    document.getElementById("biome-val").innerText = biomeData[currentBiome].name;
+    document.getElementById("time-val").innerText = ambientData[currentAmbientMode].name;
+    document.getElementById("menu").style.display = "none"; 
+    document.getElementById("game-over").style.display = "none";
+    document.getElementById("horn-hud").style.display = "none";
+    
+    resize();
+}
+
+function gameOver() { 
+    running = false; isHorning = false; isBraking = false;
+    for(let k in keys) keys[k] = false; 
+    if (score > bestScore) { bestScore = score; localStorage.setItem("racing_best", bestScore); }
+    document.getElementById("final-score").innerText = score;
+    document.getElementById("final-coins").innerText = coinsCollected;
+    document.getElementById("best-score").innerText = bestScore;
+    document.getElementById("game-over").style.display = "flex";
+}
+
+function backToMenu() {
+    document.getElementById("game-over").style.display = "none";
+    document.getElementById("menu").style.display = "flex";
+    updateUI();
+}
+
+updateUI();
+loop();
+</script>
+</body>
+</html>
